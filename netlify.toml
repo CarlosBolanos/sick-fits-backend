@@ -1,4 +1,4 @@
 # All deploys from the main repository branch
 # will inherit these settings.
-[context.production]
-  command = "npm run start"
+#[context.production]
+#  command = "npm run start"
