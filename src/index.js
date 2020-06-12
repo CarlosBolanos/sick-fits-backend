@@ -1,16 +1,20 @@
-// let's go!
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+require('dotenv').config({ path: 'variables.env' });
+const createServer = require('./createServer');
+const db = require('./db');
 
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
+const server = createServer();
 
-app.get('/', (req, res) => {
-    res.send('Hi');
-});
+// TODO Use express middlware to handle cookies (JWT)
+// TODO Use express middlware to populate current user
 
-app.listen(5000, err => {
-    console.log('Ready on http://localhost:5000');
-});
+server.start(
+    {
+        cors: {
+            credentials: true,
+            origin: process.env.FRONTEND_URL,
+        },
+    },
+    deets => {
+        console.log(`Server is now running on port http:/localhost:${deets.port}`);
+    }
+);
