@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { randomBytes } = require("crypto");
 const { promesify, promisify } = require("util");
+const { makeEmail, transport } = require("../mailer/mail");
 
 const Mutations = {
   async createItem(parent, args, ctx, info) {
@@ -78,7 +79,14 @@ const Mutations = {
     ctx.response.clearCookie("token");
   },
   async requestReset(parent, { email }, ctx, info) {
-    const user = await ctx.db.query.user({ where: { email } }, info);
+    ctx.response.clearCookie("token");
+    const user = await ctx.db.query.user(
+      { where: { email } },
+      `{ 
+        id
+        email
+      }`
+    );
 
     if (user) {
       const resetToken = (await promisify(randomBytes)(20)).toString("hex");
@@ -87,6 +95,22 @@ const Mutations = {
         where: { email },
         data: { resetToken, resetTokenExpiry },
       });
+
+      const emailData = {
+        from: "mail@carlos-bolanos.com",
+        to: user.email,
+        subject: "Password reset request",
+        html: makeEmail(
+          `<a href="${
+            process.env.FRONTEND_URL
+          }/password/reset?resetToken=${resetToken}">Your password reset token is here! </a>`
+        ),
+      };
+      console.log("f: emailData", emailData);
+
+      const mailRes = await transport.sendMail(emailData);
+      console.log("f: mailRes", mailRes);
+
       return { statusCode: 1, message: "User password reset in progress" };
     }
 
@@ -98,24 +122,24 @@ const Mutations = {
     ctx,
     info
   ) {
-    console.log("f: resetPassword", resetToken, password, passwordConfirm);
-
     const [user] = await ctx.db.query.users({
       where: {
         resetToken,
         resetTokenExpiry_gte: Date.now() - 60 * 60 * 1000,
       },
     });
-    console.log("f: user", user);
 
     if (!user) {
       throw new Error("Invalid/Expired token, please try again!");
-      return;
+      return {
+        statusCode: 2,
+        message: "Invalid/Expired token, please try again!",
+      };
     }
 
     if (password !== passwordConfirm) {
       throw new Error("Invalid Passwords!");
-      return;
+      return { statusCode: 3, message: "Passwords dont match" };
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

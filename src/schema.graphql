@@ -18,7 +18,7 @@ type Mutation {
     resetToken: String!
     password: String!
     passwordConfirm: String!
-  ): StatusMessage!
+  ): User!
 }
 
 type Query {
