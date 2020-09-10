@@ -1,18 +1,47 @@
 # import * from './generated/prisma.graphql';
 
 type Mutation {
-  createItem(title: String, description: String, price: Int, image: String, largeImage: String): Item!
+  createItem(
+    title: String
+    description: String
+    price: Int
+    image: String
+    largeImage: String
+  ): Item!
   updateItem(id: ID!, title: String, description: String, price: Int): Item!
   deleteItem(id: ID!): Item
   signup(name: String!, email: String!, password: String!): User!
   signin(email: String!, password: String!): User!
-  signout: User 
+  signout: User
+  requestReset(email: String!): StatusMessage!
+  resetPassword(
+    resetToken: String!
+    password: String!
+    passwordConfirm: String!
+  ): StatusMessage!
 }
 
 type Query {
   users(where: ItemWhereInput): [User]!
-  items(where: ItemWhereInput, orderBy: ItemOrderByInput, skip: Int, first: Int): [Item]!
-  itemsConnection(where: ItemWhereInput):ItemConnection!
+  items(
+    where: ItemWhereInput
+    orderBy: ItemOrderByInput
+    skip: Int
+    first: Int
+  ): [Item]!
+  itemsConnection(where: ItemWhereInput): ItemConnection!
   item(where: ItemWhereUniqueInput!): Item
   me: User
+}
+
+type StatusMessage {
+  statusCode: Int!
+  message: String!
+}
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  permissions: [Permission!]!
 }
