@@ -1,12 +1,27 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { randomBytes } = require("crypto");
-const { promesify, promisify } = require("util");
+const { promisify } = require("util");
+const { hasPermission } = require("../utils");
 const { makeEmail, transport } = require("../mailer/mail");
+const { connect } = require("http2");
 
 const Mutations = {
   async createItem(parent, args, ctx, info) {
-    const item = await ctx.db.mutation.createItem({ data: { ...args } }, info);
+    if (!ctx.request.userId) {
+      throw new Error("user is not logged in");
+    }
+    const item = await ctx.db.mutation.createItem(
+      {
+        data: {
+          ...args,
+          user: {
+            connect: { id: ctx.request.userId },
+          },
+        },
+      },
+      info
+    );
     return item;
   },
   async updateItem(parent, args, ctx, info) {
@@ -60,7 +75,6 @@ const Mutations = {
 
     if (user) {
       const isValidPassword = await bcrypt.compare(password, user.password);
-      console.log("f: isValidPassword", isValidPassword);
       if (isValidPassword) {
         const token = jwt.sign({ userId: user.id }, process.env.APP_SECRET);
         ctx.response.cookie("token", token, {
@@ -106,10 +120,8 @@ const Mutations = {
           }/password/reset?resetToken=${resetToken}">Your password reset token is here! </a>`
         ),
       };
-      console.log("f: emailData", emailData);
 
       const mailRes = await transport.sendMail(emailData);
-      console.log("f: mailRes", mailRes);
 
       return { statusCode: 1, message: "User password reset in progress" };
     }
@@ -163,6 +175,30 @@ const Mutations = {
     });
 
     return updatedUser;
+  },
+  async updatePermissions(parent, args, ctx, info) {
+    if (!ctx.request.userId) {
+      throw new Error("user is not logged in");
+    }
+
+    if (hasPermission(ctx.request.user, ["ADMIN", "PERMISSION_UPDATE"])) {
+      const { permissions, userId } = args;
+      console.log("f: permissions", permissions);
+      console.log("f: userId", userId);
+      return ctx.db.mutation.updateUser(
+        {
+          data: {
+            permissions: {
+              set: permissions,
+            },
+          },
+          where: {
+            id: userId,
+          },
+        },
+        info
+      );
+    }
   },
 };
 

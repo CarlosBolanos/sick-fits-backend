@@ -19,10 +19,11 @@ type Mutation {
     password: String!
     passwordConfirm: String!
   ): User!
+  updatePermissions(permissions: [Permission], userId: String): User
 }
 
 type Query {
-  users(where: ItemWhereInput): [User]!
+  users: [User]!
   items(
     where: ItemWhereInput
     orderBy: ItemOrderByInput
